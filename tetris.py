@@ -342,6 +342,8 @@ class Tetris:
             self.soft_drop()
         elif key == ord('w'):  # Hard drop
             self.hard_drop()
+        elif key == ord("r"): # Rotate piece
+            self.rotate_piece(90)
         elif key == ord('p'):  # Pause game
             self.pause_game()
         elif key == ord('q'):  # Quit game
