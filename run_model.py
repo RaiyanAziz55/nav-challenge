@@ -13,5 +13,6 @@ done = False
 while not done:
     next_states = {tuple(v): k for k, v in env.get_next_states().items()}
     best_state = agent.best_state(next_states.keys())
+    print("AI Recommendation:", best_state)
     best_action = next_states[best_state]
     reward, done = env.play(best_action[0], best_action[1], render=True)
