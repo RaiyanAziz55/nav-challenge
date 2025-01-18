@@ -186,6 +186,34 @@ class Block(pygame.sprite.Sprite):
         if self.current:
             self.move_down()
 
+    def predict_landing_position(self, group):
+        """Predict the landing position of the block."""
+        original_y = self.y
+        while True:
+            self.y += 1
+            if self.rect.bottom > GRID_HEIGHT or Block.collide(self, group):
+                # Rollback to the last valid position.
+                self.y -= 1
+                break
+        landing_position = self.y
+        self.y = original_y  # Restore original position
+        return landing_position
+
+    def draw_shadow(self, screen, group):
+        landing_position = self.predict_landing_position(group)
+        original_y = self.y
+        self.y = landing_position
+        for y, row in enumerate(self.struct):
+            for x, col in enumerate(row):
+                if col:
+                    pygame.draw.rect(
+                        screen,
+                        (self.color[0] // 2, self.color[1] // 2, self.color[2] // 2),  # Darker color
+                        Rect((self.x + x) * TILE_SIZE + 1, (self.y + y) * TILE_SIZE + 1,
+                            TILE_SIZE - 2, TILE_SIZE - 2)
+                    )
+        self.y = original_y  # Restore original position
+
 
 class SquareBlock(Block):
     struct = (
@@ -394,6 +422,7 @@ def draw_centered_surface(screen, surface, y):
     screen.blit(surface, (400 - surface.get_width()//2, y))
 
 
+
 def main():
     pygame.init()
     pygame.display.set_caption("Tetris with PyGame")
@@ -465,6 +494,11 @@ def main():
         screen.blit(background, (0, 0))
         # Blocks.
         blocks.draw(screen)
+        # Draw shadow block before the current block.
+        blocks.current_block.draw_shadow(screen, blocks)
+        # Draw current blocks.
+        blocks.draw(screen)
+
         # Sidebar with misc. information.
         draw_centered_surface(screen, next_block_text, 50)
         draw_centered_surface(screen, blocks.next_block.image, 100)
