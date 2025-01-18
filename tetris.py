@@ -4,6 +4,7 @@
     Copyright (C) 2021 Python Assets - pythonassets.com.
 """
 
+from multiprocessing import Process
 from collections import OrderedDict
 import random
 
@@ -440,24 +441,29 @@ def main_menu():
 
     # Text
     intro_text = intro_font.render("Welcome to Tetris!", True, blue)
-    play_text = font.render("Play", True, white)
-    play_rect = play_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
-    
-    #Difficulty
-    play_text = font.render("Play", True, white)
-    play_rect = play_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+    singleplay_text = font.render("SINGLEPLAYER", True, white)
+    multiplay_text = font.render("MULTIPLAYER", True, white)
+
+    # Rectangles for buttons
+    singleplay_rect = singleplay_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50))
+    multiplay_rect = multiplay_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 50))
 
     # Menu loop
     run = True
+    selected_option = None
     while run:
         screen.fill(black)
 
         # Draw intro text
         screen.blit(intro_text, (WINDOW_WIDTH // 2 - intro_text.get_width() // 2, 150))
 
-        # Draw the "Play" button
-        pygame.draw.rect(screen, blue, play_rect.inflate(20, 10))
-        screen.blit(play_text, play_rect)
+        # Draw the "Singleplayer" button
+        pygame.draw.rect(screen, blue, singleplay_rect.inflate(20, 10))
+        screen.blit(singleplay_text, singleplay_rect)
+
+        # Draw the "Multiplayer" button
+        pygame.draw.rect(screen, blue, multiplay_rect.inflate(20, 10))
+        screen.blit(multiplay_text, multiplay_rect)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -465,11 +471,17 @@ def main_menu():
                 sys.exit()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if play_rect.collidepoint(event.pos):
-                    run = False  # Exit the menu loop and start the game
+                if singleplay_rect.collidepoint(event.pos):
+                    selected_option = "singleplayer"
+                    run = False
+                elif multiplay_rect.collidepoint(event.pos):
+                    selected_option = "multiplayer"
+                    run = False
 
         pygame.display.flip()
         clock.tick(60)
+
+    return selected_option
         
 def difficulty_menu():
     pygame.init()
@@ -541,10 +553,7 @@ def difficulty_menu():
     return selected_difficulty
 
 
-
-def main():
-    main_menu()
-    difficulty = difficulty_menu()
+def run_game_instance(difficulty, instance_id):
     pygame.init()
     pygame.display.set_caption("Tetris with PyGame")
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -651,6 +660,30 @@ def main():
             draw_centered_surface(screen, game_over_text, 360)
         # Update.
         pygame.display.flip()
+        
+        
+def run_multi_instance(difficulty):
+    """Run two game instances using multi-processing."""
+    process1 = Process(target=run_game_instance, args=(difficulty, 1))
+    process2 = Process(target=run_game_instance, args=(difficulty, 2))     
+
+    # Start both processes
+    process1.start()
+    process2.start()
+
+    # Wait for both processes to finish
+    process1.join()
+    process2.join()
+
+
+
+def main():
+    
+    selected_option = main_menu()
+    difficulty = difficulty_menu()
+
+    run_game_instance(difficulty,1)
+    
     
     pygame.quit()
 
