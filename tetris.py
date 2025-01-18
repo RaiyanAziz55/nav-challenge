@@ -426,7 +426,7 @@ class Tetris:
         while paused:
             # Render the current screen and overlay "Game Paused" text
             canvas = self.get_canvas()  # Create the current canvas (game board + menu)
-            cv2.putText(canvas, "Game Paused", (100, 300), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
+            cv2.putText(canvas, "Game Paused", (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
 
             # Display the updated canvas
             cv2.imshow('Tetris', canvas)
