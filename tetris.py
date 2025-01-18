@@ -70,6 +70,8 @@ class Tetris:
 
     def __init__(self):
         self.reset()
+        self.held_piece = None  # Initialize the held piece
+        self.hold_flag = False  # Prevent multiple holds in one turn
 
     
     def reset(self):
@@ -82,6 +84,24 @@ class Tetris:
         self._new_round()
         self.score = 0
         return self._get_board_props(self.board)
+
+    def update_game_state(self):
+        """Automatically update the game state by moving the current piece down."""
+        # Try to move the piece down
+        self.current_pos[1] += 1
+        if self._check_collision(self._get_rotated_piece(), self.current_pos):
+            # If collision occurs, revert the move and finalize the piece
+            self.current_pos[1] -= 1
+            self.board = self._add_piece_to_board(self._get_rotated_piece(), self.current_pos)
+            lines_cleared, self.board = self._clear_lines(self.board)
+            self.score += lines_cleared * 10  # Update score based on lines cleared
+
+            # Start a new round
+            self._new_round()
+
+            # Check for game over
+            if self._check_collision(self._get_rotated_piece(), self.current_pos):
+                self.game_over = True
 
 
     def _get_rotated_piece(self):
@@ -109,19 +129,21 @@ class Tetris:
     
 
     def _new_round(self):
-        '''Starts a new round (new piece)'''
-        # Generate new bag with the pieces
+        """Start a new round with a new piece."""
         if len(self.bag) == 0:
             self.bag = list(range(len(Tetris.TETROMINOS)))
             random.shuffle(self.bag)
-        
+
         self.current_piece = self.next_piece
         self.next_piece = self.bag.pop()
         self.current_pos = [3, 0]
         self.current_rotation = 0
+        self.hold_flag = False  # Allow holding again in the new turn
 
+        # Check for game over
         if self._check_collision(self._get_rotated_piece(), self.current_pos):
             self.game_over = True
+
 
 
     def _check_collision(self, piece, pos):
@@ -266,38 +288,92 @@ class Tetris:
 
         return states
 
+    def handle_player_input(self, key):
+        """Handle player key inputs."""
+        if key == ord('a'):  # Move left
+            self.move_piece_left()
+        elif key == ord('d'):  # Move right
+            self.move_piece_right()
+        elif key == ord('s'):  # Soft drop
+            self.soft_drop()
+        elif key == ord('w'):  # Hard drop
+            self.hard_drop()
+        elif key == ord('j'):  # Rotate left
+            self.rotate_piece(-90)
+        elif key == ord('l'):  # Rotate right
+            self.rotate_piece(90)
+        elif key == ord('i'):  # Hold piece
+            self.hold_piece()
+
 
     def get_state_size(self):
         '''Size of the state'''
         return 4
 
+    def move_piece_left(self):
+        """Move the current piece one step to the left."""
+        new_pos = [self.current_pos[0] - 1, self.current_pos[1]]
+        if not self._check_collision(self._get_rotated_piece(), new_pos):
+            self.current_pos = new_pos
 
-    def play(self, x, rotation, render=False, render_delay=None):
-        '''Makes a play given a position and a rotation, returning the reward and if the game is over'''
-        self.current_pos = [x, 0]
-        self.current_rotation = rotation
+    def move_piece_right(self):
+        """Move the current piece one step to the right."""
+        new_pos = [self.current_pos[0] + 1, self.current_pos[1]]
+        if not self._check_collision(self._get_rotated_piece(), new_pos):
+            self.current_pos = new_pos
 
-        # Drop piece
+    def soft_drop(self):
+        """Move the current piece down one step."""
+        new_pos = [self.current_pos[0], self.current_pos[1] + 1]
+        if not self._check_collision(self._get_rotated_piece(), new_pos):
+            self.current_pos = new_pos
+
+    def hard_drop(self):
+        """Drop the current piece to the lowest valid position."""
         while not self._check_collision(self._get_rotated_piece(), self.current_pos):
-            if render:
-                self.render()
-                if render_delay:
-                    sleep(render_delay)
             self.current_pos[1] += 1
-        self.current_pos[1] -= 1
+        self.current_pos[1] -= 1  # Adjust after collision
 
-        # Update board and calculate score        
-        self.board = self._add_piece_to_board(self._get_rotated_piece(), self.current_pos)
-        lines_cleared, self.board = self._clear_lines(self.board)
-        score = 1 + (lines_cleared ** 2) * Tetris.BOARD_WIDTH
-        self.score += score
+    def rotate_piece(self, angle):
+        """Rotate the current piece."""
+        new_rotation = (self.current_rotation + angle) % 360
+        rotated_piece = Tetris.TETROMINOS[self.current_piece][new_rotation]
+        if not self._check_collision(rotated_piece, self.current_pos):
+            self.current_rotation = new_rotation
 
-        # Start new round
-        self._new_round()
-        if self.game_over:
-            score -= 2
+    def hold_piece(self):
+        """Swap the current piece with the held piece."""
+        if self.hold_flag:  # Prevent multiple holds in one turn
+            return  # Do nothing if the player already used hold in this turn
 
-        return score, self.game_over
+        if self.held_piece is None:
+            # First-time holding: store the current piece and start a new round
+            self.held_piece = self.current_piece
+            self._new_round()
+        else:
+            # Swap the current piece with the held piece
+            self.current_piece, self.held_piece = self.held_piece, self.current_piece
+            self.current_pos = [3, 0]  # Reset position for the new piece
+            self.current_rotation = 0  # Reset rotation for the new piece
+
+        self.hold_flag = True  # Disable further holds in this turn
+
+
+    def play(self):
+        while not self.game_over:
+            # Render the game
+            self.render()
+
+            # Get key press
+            key = cv2.waitKey(100)
+
+            # Handle player input
+            if key != -1:  # Check if a key was pressed
+                self.handle_player_input(key)
+
+            # Update game state (e.g., move pieces down automatically)
+            self.update_game_state()
+
 
 
     def render(self):
@@ -311,3 +387,13 @@ class Tetris:
         cv2.putText(img, str(self.score), (22, 22), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
         cv2.imshow('image', np.array(img))
         cv2.waitKey(1)
+def main():
+    # Create a Tetris game instance
+    game = Tetris()
+
+    # Run the game loop
+    game.play()
+
+
+if __name__ == "__main__":
+    main()
