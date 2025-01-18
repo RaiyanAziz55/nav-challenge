@@ -442,6 +442,10 @@ def main_menu():
     intro_text = intro_font.render("Welcome to Tetris!", True, blue)
     play_text = font.render("Play", True, white)
     play_rect = play_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+    
+    #Difficulty
+    play_text = font.render("Play", True, white)
+    play_rect = play_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
 
     # Menu loop
     run = True
@@ -466,12 +470,81 @@ def main_menu():
 
         pygame.display.flip()
         clock.tick(60)
+        
+def difficulty_menu():
+    pygame.init()
+    pygame.display.set_caption("Tetris with PyGame - Select Difficulty")
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    clock = pygame.time.Clock()
 
+    # Colors
+    white = (255, 255, 255)
+    black = (0, 0, 0)
+    blue = (30, 145, 255)
+
+    # Fonts
+    try:
+        font = pygame.font.Font("Roboto-Regular.ttf", 30)
+    except OSError:
+        font = pygame.font.Font(pygame.font.get_default_font(), 30)
+    intro_font = pygame.font.Font(pygame.font.get_default_font(), 40)
+
+     # Text
+    intro_text = intro_font.render("Select your difficulty:", True, blue)
+    easy_text = font.render("EASY", True, white)
+    medium_text = font.render("MEDIUM", True, white)
+    hard_text = font.render("HARD", True, white)
+
+    # Rectangles for buttons
+    easy_rect = easy_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50))
+    medium_rect = medium_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+    hard_rect = hard_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 50))
+
+    # Menu loop
+    run = True
+    selected_difficulty = None
+    while run:
+        screen.fill(black)
+
+        # Draw intro text
+        screen.blit(intro_text, (WINDOW_WIDTH // 2 - intro_text.get_width() // 2, 150))
+
+        # Draw buttons
+        pygame.draw.rect(screen, blue, easy_rect.inflate(20, 10))
+        screen.blit(easy_text, easy_rect)
+
+        pygame.draw.rect(screen, blue, medium_rect.inflate(20, 10))
+        screen.blit(medium_text, medium_rect)
+
+        pygame.draw.rect(screen, blue, hard_rect.inflate(20, 10))
+        screen.blit(hard_text, hard_rect)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if easy_rect.collidepoint(event.pos):
+                    selected_difficulty = 'easy'
+                    run = False
+                elif medium_rect.collidepoint(event.pos):
+                    selected_difficulty = 'medium'
+                    run = False
+                elif hard_rect.collidepoint(event.pos):
+                    selected_difficulty = 'hard'
+                    run = False
+
+        pygame.display.flip()
+        #clock.tick(60)
+        
+    return selected_difficulty
 
 
 
 def main():
     main_menu()
+    difficulty = difficulty_menu()
     pygame.init()
     pygame.display.set_caption("Tetris with PyGame")
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -499,11 +572,31 @@ def main():
     game_over_text = font.render(
         "¡Game over!", True, (255, 220, 0), bgcolor)
     
+    #Difficulty Settings
+    DIFFICULTY_SETTINGS = {
+    'easy': {
+        'BLOCK_SPEED': 750,            # Falling speed (ms)
+        #'shape_variability': 2,   # Maximum number of block types
+        #'move_window': 500,       # Time for lateral movement (ms)
+        #'rotations_allowed': 4,   # Unlimited rotations
+        #'death_height': 20        # Maximum rows allowed
+    },
+    'medium': {
+        'BLOCK_SPEED': 375,
+      
+    },
+    'hard': {
+        'BLOCK_SPEED': 150,
+      
+    }
+}
+
+    
     # Event constants.
     MOVEMENT_KEYS = pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN
     EVENT_UPDATE_CURRENT_BLOCK = pygame.USEREVENT + 1
     EVENT_MOVE_CURRENT_BLOCK = pygame.USEREVENT + 2
-    pygame.time.set_timer(EVENT_UPDATE_CURRENT_BLOCK, 1000)
+    pygame.time.set_timer(EVENT_UPDATE_CURRENT_BLOCK, DIFFICULTY_SETTINGS[difficulty]['BLOCK_SPEED'])
     pygame.time.set_timer(EVENT_MOVE_CURRENT_BLOCK, 100)
     
     blocks = BlocksGroup()
