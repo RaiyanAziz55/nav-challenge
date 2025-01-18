@@ -80,7 +80,7 @@ def dqn():
             print(f'Saving a new best model (score={env.get_game_score()}, episode={episode})')
             best_score = env.get_game_score()
             agent.save_model("best.keras")
-
+            
 
 if __name__ == "__main__":
     dqn()

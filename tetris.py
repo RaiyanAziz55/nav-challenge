@@ -237,9 +237,9 @@ class Tetris:
         states = {}
         piece_id = self.current_piece
         
-        if piece_id == 6: 
+        if piece_id == 6: # Square
             rotations = [0]
-        elif piece_id == 0:
+        elif piece_id == 0: # Rectangle
             rotations = [0, 90]
         else:
             rotations = [0, 90, 180, 270]
