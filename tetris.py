@@ -392,9 +392,57 @@ def draw_grid(background):
 
 def draw_centered_surface(screen, surface, y):
     screen.blit(surface, (400 - surface.get_width()//2, y))
+def main_menu():
+    pygame.init()
+    pygame.display.set_caption("Tetris with PyGame - Menu")
+    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    clock = pygame.time.Clock()
+
+    # Colors
+    white = (255, 255, 255)
+    black = (0, 0, 0)
+    blue = (30, 145, 255)
+
+    # Fonts
+    try:
+        font = pygame.font.Font("Roboto-Regular.ttf", 30)
+    except OSError:
+        font = pygame.font.Font(pygame.font.get_default_font(), 30)
+    intro_font = pygame.font.Font(pygame.font.get_default_font(), 40)
+
+    # Text
+    intro_text = intro_font.render("Welcome to Tetris!", True, blue)
+    play_text = font.render("Play", True, white)
+    play_rect = play_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+
+    # Menu loop
+    run = True
+    while run:
+        screen.fill(black)
+
+        # Draw intro text
+        screen.blit(intro_text, (WINDOW_WIDTH // 2 - intro_text.get_width() // 2, 150))
+
+        # Draw the "Play" button
+        pygame.draw.rect(screen, blue, play_rect.inflate(20, 10))
+        screen.blit(play_text, play_rect)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if play_rect.collidepoint(event.pos):
+                    run = False  # Exit the menu loop and start the game
+
+        pygame.display.flip()
+        clock.tick(60)
+
 
 
 def main():
+    main_menu()
     pygame.init()
     pygame.display.set_caption("Tetris with PyGame")
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
