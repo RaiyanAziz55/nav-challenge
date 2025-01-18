@@ -71,7 +71,6 @@ class Tetris:
         3: (0, 255, 111),
     }
 
-
     def __init__(self):
         self.reset()
         self.held_piece = None
@@ -80,7 +79,6 @@ class Tetris:
         # Initialize the AI agent
         self.agent = DQNAgent(state_size=self.get_state_size(), modelFile="sample.keras")
 
-    
     def reset(self):
         '''Resets the game, returning the current state'''
         self.board = [[0] * Tetris.BOARD_WIDTH for _ in range(Tetris.BOARD_HEIGHT)]
@@ -109,7 +107,6 @@ class Tetris:
             # Check for game over
             if self._check_collision(self._get_rotated_piece(), self.current_pos):
                 self.game_over = True
-
 
     def _get_rotated_piece(self):
         '''Returns the current piece, including rotation'''
@@ -146,16 +143,10 @@ class Tetris:
             board[y][x] = Tetris.MAP_PLAYER
         return board
 
-
     def get_game_score(self):
-        '''Returns the current game score.
-
-        Each block placed counts as one.
-        For lines cleared, it is used BOARD_WIDTH * lines_cleared ^ 2.
-        '''
+        '''Returns the current game score.'''
         return self.score
     
-
     def _new_round(self):
         """Start a new round with a new piece."""
         if len(self.bag) == 0:
@@ -172,8 +163,6 @@ class Tetris:
         if self._check_collision(self._get_rotated_piece(), self.current_pos):
             self.game_over = True
 
-
-
     def _check_collision(self, piece, pos):
         '''Check if there is a collision between the current piece and the board'''
         for x, y in piece:
@@ -184,7 +173,6 @@ class Tetris:
                     or self.board[y][x] == Tetris.MAP_BLOCK:
                 return True
         return False
-
 
     def _rotate(self, angle):
         '''Change the current rotation'''
@@ -199,14 +187,12 @@ class Tetris:
 
         self.current_rotation = r
 
-
     def _add_piece_to_board(self, piece, pos):
         '''Place a piece in the board, returning the resulting board'''        
         board = [x[:] for x in self.board]
         for x, y in piece:
             board[y + pos[1]][x + pos[0]] = Tetris.MAP_BLOCK
         return board
-
 
     def _clear_lines(self, board):
         '''Clears completed lines in a board'''
@@ -219,9 +205,8 @@ class Tetris:
                 board.insert(0, [0 for _ in range(Tetris.BOARD_WIDTH)])
         return len(lines_to_clear), board
 
-
     def _number_of_holes(self, board):
-        '''Number of holes in the board (empty sqquare with at least one block above it)'''
+        '''Number of holes in the board (empty square with at least one block above it)'''
         holes = 0
 
         for col in zip(*board):
@@ -231,7 +216,6 @@ class Tetris:
             holes += len([x for x in col[i+1:] if x == Tetris.MAP_EMPTY])
 
         return holes
-
 
     def _bumpiness(self, board):
         '''Sum of the differences of heights between pair of columns'''
@@ -252,7 +236,6 @@ class Tetris:
 
         return total_bumpiness, max_bumpiness
 
-
     def _height(self, board):
         '''Sum and maximum height of the board'''
         sum_height = 0
@@ -272,7 +255,6 @@ class Tetris:
 
         return sum_height, max_height, min_height
 
-
     def _get_board_props(self, board):
         '''Get properties of the board'''
         lines, board = self._clear_lines(board)
@@ -280,7 +262,6 @@ class Tetris:
         total_bumpiness, max_bumpiness = self._bumpiness(board)
         sum_height, max_height, min_height = self._height(board)
         return [lines, holes, total_bumpiness, sum_height]
-
 
     def get_next_states(self):
         '''Get all possible next states'''
@@ -343,7 +324,6 @@ class Tetris:
         cv2.putText(canvas, " - Q: Quit", (menu_x_start, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
         return canvas
-
 
     def handle_player_input(self, key):
         """Handle player key inputs."""
@@ -439,8 +419,6 @@ class Tetris:
                 self.game_over = True
                 paused = False
 
-
-
     def play(self):
         while not self.game_over:
             # Render the game
@@ -487,21 +465,21 @@ class Tetris:
         cv2.waitKey(1)
 
 
-
 def main():
-    # Show the menu
-    menu = Menu()
-    choice = menu.show()
+    while True:  # Loop to allow restarting the game
+        # Show the menu
+        menu = Menu()
+        choice = menu.show()
 
-    if choice == "Play Game":
-        game = Tetris()
-        game.play()
-    elif choice == "Set Difficulty":
-        print("Difficulty selection not implemented yet!")
-        # Add your difficulty logic here
-    elif choice == "Quit":
-        print("Exiting game...")
-
+        if choice == "Play Game":
+            game = Tetris()
+            game.play()
+        elif choice == "Set Difficulty":
+            print("Difficulty selection not implemented yet!")
+            # Add your difficulty logic here
+        elif choice == "Quit":
+            print("Exiting game...")
+            break  # Exit the loop and quit the game
 
 
 if __name__ == "__main__":
