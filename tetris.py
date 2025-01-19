@@ -71,16 +71,14 @@ class Tetris:
         3: (0, 255, 111),
     }
 
-
     def __init__(self):
+        self.agent = DQNAgent(state_size=self.get_state_size(), modelFile="sample.keras")
         self.reset()
         self.held_piece = None
         self.hold_flag = False
-        
-        # Initialize the AI agent
-        self.agent = DQNAgent(state_size=self.get_state_size(), modelFile="sample.keras")
-
+        self.show_recommendation = False
     
+
     def reset(self):
         '''Resets the game, returning the current state'''
         self.board = [[0] * Tetris.BOARD_WIDTH for _ in range(Tetris.BOARD_HEIGHT)]
@@ -110,32 +108,60 @@ class Tetris:
             if self._check_collision(self._get_rotated_piece(), self.current_pos):
                 self.game_over = True
 
-
     def _get_rotated_piece(self):
         '''Returns the current piece, including rotation'''
         return Tetris.TETROMINOS[self.current_piece][self.current_rotation]
 
     def draw_ai_recommendation(self):
-        '''Draw the AI's recommended move on the board'''
+        '''Calculate the AI's recommended move and return the coordinates.'''
         recommended_action = get_ai_recommendation(self, self.agent)
         if not recommended_action:
-            return  # No recommendation available
-        
+            return []  # No recommendation available
+
         x, rotation = recommended_action
         simulated_piece = Tetris.TETROMINOS[self.current_piece][rotation]
         simulated_piece = [np.add(p, [x, 0]) for p in simulated_piece]
 
         # Simulate the drop
-        while not self._check_collision(simulated_piece, [x, 0]):
+        while not self._check_collision(simulated_piece, [0, 0]):
             for p in simulated_piece:
-                p[1] += 1
+                p[1] += 1  # Move piece down
         for p in simulated_piece:
-            p[1] -= 1
+            p[1] -= 1  # Adjust after collision
 
-        # Draw the recommended position as green blocks
-        for x, y in simulated_piece:
-            if 0 <= y < Tetris.BOARD_HEIGHT and 0 <= x < Tetris.BOARD_WIDTH:
-                self.board[y][x] = 3  # Use green color for AI recommendation
+        # Return the final position of the recommendation
+        return [(int(px), int(py)) for px, py in simulated_piece if 0 <= py < Tetris.BOARD_HEIGHT and 0 <= px < Tetris.BOARD_WIDTH]
+
+    def apply_ai_recommendation(self):
+        """Move the current piece to the AI-recommended position."""
+        if not self.reccomendantion:
+            print("AI recommendation is missing or invalid.")
+            return
+
+        # Extract the recommended position
+        x, rotation = get_ai_recommendation(self, self.agent)
+        print(f"Applying AI Recommendation: x={x}, rotation={rotation}")
+
+        # Apply the recommendation
+        self.current_pos[0] = x  # Update the horizontal position
+        self.current_rotation = rotation  # Update the rotation
+
+        # Perform a hard drop to finalize the position
+        while not self._check_collision(self._get_rotated_piece(), self.current_pos):
+            self.current_pos[1] += 1
+        self.current_pos[1] -= 1  # Adjust after collision
+
+        # Place the piece on the board
+        self.board = self._add_piece_to_board(self._get_rotated_piece(), self.current_pos)
+
+        # Clear lines and update the game state
+        lines_cleared, self.board = self._clear_lines(self.board)
+        self.score += lines_cleared * 10  # Update score based on lines cleared
+
+        # Start a new round
+        self._new_round()
+
+
 
     def _get_complete_board(self):
         '''Returns the complete board, including the current piece'''
@@ -146,16 +172,10 @@ class Tetris:
             board[y][x] = Tetris.MAP_PLAYER
         return board
 
-
     def get_game_score(self):
-        '''Returns the current game score.
-
-        Each block placed counts as one.
-        For lines cleared, it is used BOARD_WIDTH * lines_cleared ^ 2.
-        '''
+        '''Returns the current game score.'''
         return self.score
     
-
     def _new_round(self):
         """Start a new round with a new piece."""
         if len(self.bag) == 0:
@@ -168,10 +188,12 @@ class Tetris:
         self.current_rotation = 0
         self.hold_flag = False  # Allow holding again in the new turn
 
+        # Compute AI recommendation
+        self.reccomendantion = self.draw_ai_recommendation()
+
         # Check for game over
         if self._check_collision(self._get_rotated_piece(), self.current_pos):
             self.game_over = True
-
 
 
     def _check_collision(self, piece, pos):
@@ -184,7 +206,6 @@ class Tetris:
                     or self.board[y][x] == Tetris.MAP_BLOCK:
                 return True
         return False
-
 
     def _rotate(self, angle):
         '''Change the current rotation'''
@@ -199,14 +220,12 @@ class Tetris:
 
         self.current_rotation = r
 
-
     def _add_piece_to_board(self, piece, pos):
         '''Place a piece in the board, returning the resulting board'''        
         board = [x[:] for x in self.board]
         for x, y in piece:
             board[y + pos[1]][x + pos[0]] = Tetris.MAP_BLOCK
         return board
-
 
     def _clear_lines(self, board):
         '''Clears completed lines in a board'''
@@ -219,9 +238,8 @@ class Tetris:
                 board.insert(0, [0 for _ in range(Tetris.BOARD_WIDTH)])
         return len(lines_to_clear), board
 
-
     def _number_of_holes(self, board):
-        '''Number of holes in the board (empty sqquare with at least one block above it)'''
+        '''Number of holes in the board (empty square with at least one block above it)'''
         holes = 0
 
         for col in zip(*board):
@@ -231,7 +249,6 @@ class Tetris:
             holes += len([x for x in col[i+1:] if x == Tetris.MAP_EMPTY])
 
         return holes
-
 
     def _bumpiness(self, board):
         '''Sum of the differences of heights between pair of columns'''
@@ -252,7 +269,6 @@ class Tetris:
 
         return total_bumpiness, max_bumpiness
 
-
     def _height(self, board):
         '''Sum and maximum height of the board'''
         sum_height = 0
@@ -272,7 +288,6 @@ class Tetris:
 
         return sum_height, max_height, min_height
 
-
     def _get_board_props(self, board):
         '''Get properties of the board'''
         lines, board = self._clear_lines(board)
@@ -280,7 +295,6 @@ class Tetris:
         total_bumpiness, max_bumpiness = self._bumpiness(board)
         sum_height, max_height, min_height = self._height(board)
         return [lines, holes, total_bumpiness, sum_height]
-
 
     def get_next_states(self):
         '''Get all possible next states'''
@@ -344,14 +358,19 @@ class Tetris:
 
         return canvas
 
-
     def handle_player_input(self, key):
         """Handle player key inputs."""
-        if key == ord('h'):  # Press 'H' to use AI recommendation
-            recommendation = get_ai_recommendation(self, self.agent)
-            if recommendation:
-                self.current_pos[0], self.current_rotation = recommendation
-                return
+        if key == ord('h'):  # Press 'H' to toggle AI recommendation
+            self.show_recommendation = not self.show_recommendation  # Toggle visibility
+            return
+
+        if key == ord('i'):  # Press 'I' to move piece to the AI-recommended position
+            if self.reccomendantion:
+                # Move the current piece to the recommended position
+                self.apply_ai_recommendation()
+            else:
+                print("No valid AI recommendation available.")
+            return
 
         # Handle normal player controls
         if key == ord('a'):  # Move left
@@ -362,10 +381,13 @@ class Tetris:
             self.soft_drop()
         elif key == ord('w'):  # Hard drop
             self.hard_drop()
+        elif key == ord("r"):  # Rotate piece
+            self.rotate_piece(90)
         elif key == ord('p'):  # Pause game
             self.pause_game()
         elif key == ord('q'):  # Quit game
             self.game_over = True
+
 
 
     def get_state_size(self):
@@ -426,7 +448,7 @@ class Tetris:
         while paused:
             # Render the current screen and overlay "Game Paused" text
             canvas = self.get_canvas()  # Create the current canvas (game board + menu)
-            cv2.putText(canvas, "Game Paused", (100, 300), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3)
+            cv2.putText(canvas, "Game Paused", (50, 300), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 3)
 
             # Display the updated canvas
             cv2.imshow('Tetris', canvas)
@@ -438,8 +460,6 @@ class Tetris:
             elif key == ord('q'):  # Quit the game
                 self.game_over = True
                 paused = False
-
-
 
     def play(self):
         while not self.game_over:
@@ -457,14 +477,18 @@ class Tetris:
             self.update_game_state()
 
     def render(self):
-        '''Renders the current board with the menu integrated.'''
-        # Render game board
+        '''Render the current board along with the AI recommendation.'''
+        # Get the current game board
         img_board = [Tetris.COLORS[p] for row in self._get_complete_board() for p in row]
         img_board = np.array(img_board).reshape(Tetris.BOARD_HEIGHT, Tetris.BOARD_WIDTH, 3).astype(np.uint8)
         img_board = img_board[..., ::-1]  # Convert RGB to BGR (used by cv2)
         img_board = Image.fromarray(img_board, 'RGB')
         img_board = img_board.resize((Tetris.BOARD_WIDTH * 25, Tetris.BOARD_HEIGHT * 25), Image.NEAREST)
         img_board = np.array(img_board)
+
+
+
+    
 
         # Create a blank canvas for the full display (game + menu)
         canvas_height = Tetris.BOARD_HEIGHT * 25
@@ -473,6 +497,19 @@ class Tetris:
 
         # Paste the game board onto the left side of the canvas
         canvas[:, :img_board.shape[1]] = img_board
+
+           # Draw AI recommendation if toggled
+        if self.show_recommendation and self.reccomendantion:
+            for x, y in self.reccomendantion:
+                top_left = (x * 25, y * 25)
+                bottom_right = ((x + 1) * 25, (y + 1) * 25)
+                cv2.rectangle(
+                    canvas,
+                    top_left,
+                    bottom_right,
+                    (0, 255, 111),  # Green for recommendation
+                    -1
+                )
 
         # Draw the menu on the right side
         menu_x_start = img_board.shape[1] + 10  # Offset to the right of the game board
@@ -487,21 +524,21 @@ class Tetris:
         cv2.waitKey(1)
 
 
-
 def main():
-    # Show the menu
-    menu = Menu()
-    choice = menu.show()
+    while True:  # Loop to allow restarting the game
+        # Show the menu
+        menu = Menu()
+        choice = menu.show()
 
-    if choice == "Play Game":
-        game = Tetris()
-        game.play()
-    elif choice == "Set Difficulty":
-        print("Difficulty selection not implemented yet!")
-        # Add your difficulty logic here
-    elif choice == "Quit":
-        print("Exiting game...")
-
+        if choice == "Play Game":
+            game = Tetris()
+            game.play()
+        elif choice == "Set Difficulty":
+            print("Difficulty selection not implemented yet!")
+            # Add your difficulty logic here
+        elif choice == "Quit":
+            print("Exiting game...")
+            break  # Exit the loop and quit the game
 
 
 if __name__ == "__main__":
