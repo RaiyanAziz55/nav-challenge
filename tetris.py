@@ -195,7 +195,6 @@ class Tetris:
         if self._check_collision(self._get_rotated_piece(), self.current_pos):
             self.game_over = True
 
-
     def _check_collision(self, piece, pos):
         '''Check if there is a collision between the current piece and the board'''
         for x, y in piece:
